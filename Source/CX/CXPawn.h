@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -10,130 +8,139 @@ class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
 class UChaosWheeledVehicleMovementComponent;
+class UParticleSystem;
+class USoundBase;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateVehicle, Log, All);
 
-/**
- *  Vehicle Pawn class
- *  Handles common functionality for all vehicle types,
- *  including input handling and camera management.
- *  
- *  Specific vehicle configurations are handled in subclasses.
- */
 UCLASS(abstract)
 class ACXPawn : public AWheeledVehiclePawn
 {
 	GENERATED_BODY()
 
-	/** Spring Arm for the front camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* FrontSpringArm;
 
-	/** Front Camera component */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FrontCamera;
 
-	/** Spring Arm for the back camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* BackSpringArm;
 
-	/** Back Camera component */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* BackCamera;
 
-	/** Cast pointer to the Chaos Vehicle movement component */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CX|Fire", meta = (AllowPrivateAccess = "true"))
+	USceneComponent* FireStartPoint;
+
 	TObjectPtr<UChaosWheeledVehicleMovementComponent> ChaosVehicleMovement;
 
 protected:
-
-	/** Steering Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* SteeringAction;
 
-	/** Throttle Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* ThrottleAction;
 
-	/** Brake Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* BrakeAction;
 
-	/** Handbrake Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* HandbrakeAction;
 
-	/** Look Around Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* LookAroundAction;
 
-	/** Toggle Camera Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* ToggleCameraAction;
 
-	/** Reset Vehicle Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* ResetVehicleAction;
 
-	/** Keeps track of which camera is active */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UInputAction* FireAction;
+
 	bool bFrontCameraActive = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Speed")
+	float BaseMaxSpeed = 120.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Fire")
+	float FireRange = 3000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Fire")
+	float FireCooldown = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Fire")
+	float FireDamage = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Fire")
+	int32 StealCoinAmount = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Fire")
+	TObjectPtr<UParticleSystem> FireHitEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "CX|Fire")
+	TObjectPtr<USoundBase> FireHitSound;
+
+	float ThrottleInput = 0.0f;
+
+	float LastFireTime = -1000.0f;
 
 public:
 	ACXPawn();
 
-	// Begin Pawn interface
-
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-
-	// End Pawn interface
-
-	// Begin Actor interface
 
 	virtual void Tick(float Delta) override;
 
-	// End Actor interface
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
-
-	/** Handles steering input */
 	void Steering(const FInputActionValue& Value);
 
-	/** Handles throttle input */
 	void Throttle(const FInputActionValue& Value);
 
-	/** Handles brake input */
 	void Brake(const FInputActionValue& Value);
 
-	/** Handles brake start/stop inputs */
 	void StartBrake(const FInputActionValue& Value);
 	void StopBrake(const FInputActionValue& Value);
 
-	/** Handles handbrake start/stop inputs */
 	void StartHandbrake(const FInputActionValue& Value);
 	void StopHandbrake(const FInputActionValue& Value);
 
-	/** Handles look around input */
 	void LookAround(const FInputActionValue& Value);
 
-	/** Handles toggle camera input */
 	void ToggleCamera(const FInputActionValue& Value);
 
-	/** Handles reset vehicle input */
 	void ResetVehicle(const FInputActionValue& Value);
 
-	/** Called when the brake lights are turned on or off */
+	void Fire(const FInputActionValue& Value);
+
+	bool CanFire() const;
+
+	float GetMaxSpeed() const;
+
+	void ApplyThrottleInput();
+
+	UFUNCTION(Server, Reliable)
+	void Server_Fire();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_PlayFireEffect(FVector_NetQuantize Start, FVector_NetQuantize End, bool bHitVehicle);
+
 	UFUNCTION(BlueprintImplementableEvent, Category="Vehicle")
 	void BrakeLights(bool bBraking);
 
 public:
-	/** Returns the front spring arm subobject */
 	FORCEINLINE USpringArmComponent* GetFrontSpringArm() const { return FrontSpringArm; }
-	/** Returns the front camera subobject */
+
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FrontCamera; }
-	/** Returns the back spring arm subobject */
+
 	FORCEINLINE USpringArmComponent* GetBackSpringArm() const { return BackSpringArm; }
-	/** Returns the back camera subobject */
+
 	FORCEINLINE UCameraComponent* GetBackCamera() const { return BackCamera; }
-	/** Returns the cast Chaos Vehicle Movement subobject */
+
 	FORCEINLINE const TObjectPtr<UChaosWheeledVehicleMovementComponent>& GetChaosVehicleMovement() const { return ChaosVehicleMovement; }
 };
