@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "CXWheelFront.h"
 #include "UObject/ConstructorHelpers.h"
 

@@ -1,6 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
-
 #include "CXSportsWheelRear.h"
 
 UCXSportsWheelRear::UCXSportsWheelRear()
