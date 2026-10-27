@@ -1,9 +1,12 @@
-// CXPlayerController.cpp
-
-
 #include "CXPlayerController.h"
 #include "CXPawn.h"
 #include "CXUI.h"
+#include "CXHUDWidget.h"
+#include "CXChatWidget.h"
+#include "CXGameMode.h"
+#include "CXGameState.h"
+#include "CXPlayerState.h"
+#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "ChaosWheeledVehicleMovementComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -16,29 +19,45 @@ void ACXPlayerController::BeginPlay()
 	{
 		return;
 	}
-	
-	// spawn the UI widget and add it to the viewport
+
 	VehicleUI = CreateWidget<UCXUI>(this, VehicleUIClass);
-
 	check(VehicleUI);
-
 	VehicleUI->AddToViewport();
+
+	if (IsValid(HUDWidgetClass))
+	{
+		HUDWidget = CreateWidget<UCXHUDWidget>(this, HUDWidgetClass);
+		HUDWidget->AddToViewport();
+	}
+
+	if (IsValid(ChatWidgetClass))
+	{
+		ChatWidget = CreateWidget<UCXChatWidget>(this, ChatWidgetClass);
+		ChatWidget->AddToViewport();
+	}
+
+	RefreshHUD();
 }
 
 void ACXPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
-	
-	// get the enhanced input subsystem
+
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 	{
-		// add the mapping context so we get controls
 		Subsystem->AddMappingContext(InputMappingContext, 0);
 
-		// optionally add the steering wheel context
 		if (bUseSteeringWheelControls && SteeringWheelInputMappingContext)
 		{
 			Subsystem->AddMappingContext(SteeringWheelInputMappingContext, 1);
+		}
+	}
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		if (ChatAction)
+		{
+			EnhancedInputComponent->BindAction(ChatAction, ETriggerEvent::Started, this, &ACXPlayerController::BeginChatInput);
 		}
 	}
 }
@@ -65,6 +84,109 @@ void ACXPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	// get a pointer to the controlled pawn
 	VehiclePawn = CastChecked<ACXPawn>(InPawn);
+}
+
+void ACXPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	RefreshHUD();
+}
+
+void ACXPlayerController::RefreshHUD()
+{
+	if (IsValid(HUDWidget) == false)
+	{
+		return;
+	}
+
+	if (const ACXPlayerState* CXPlayerState = GetPlayerState<ACXPlayerState>())
+	{
+		HUDWidget->UpdateCoins(CXPlayerState->GetCoins());
+		HUDWidget->UpdateBonusMaxSpeed(CXPlayerState->GetBonusMaxSpeed());
+	}
+
+	const ACXGameState* CXGameState = GetWorld()->GetGameState<ACXGameState>();
+	if (IsValid(CXGameState) == false)
+	{
+		return;
+	}
+
+	HUDWidget->UpdateMatchState(CXGameState->GetMatchState(), CXGameState->GetRemainingTime());
+
+	if (CXGameState->GetMatchState() == ECXMatchState::Finished)
+	{
+		HUDWidget->ShowResult(CXGameState->IsWinner(PlayerState), CXGameState->GetWinners().Num(), CXGameState->GetWinningCoins());
+	}
+	else
+	{
+		HUDWidget->HideResult();
+	}
+}
+
+void ACXPlayerController::BeginChatInput(const FInputActionValue& Value)
+{
+	if (IsValid(ChatWidget) == false || bIsChatting)
+	{
+		return;
+	}
+
+	bIsChatting = true;
+
+	FInputModeUIOnly InputMode;
+	InputMode.SetWidgetToFocus(ChatWidget->GetChatInputSlateWidget());
+	SetInputMode(InputMode);
+}
+
+void ACXPlayerController::EndChatInput()
+{
+	if (bIsChatting == false)
+	{
+		return;
+	}
+
+	bIsChatting = false;
+	SetInputMode(FInputModeGameOnly());
+}
+
+bool ACXPlayerController::SanitizeChatMessage(const FString& InMessage, FString& OutMessage) const
+{
+	OutMessage = InMessage.TrimStartAndEnd().Left(MaxChatMessageLength);
+	return OutMessage.IsEmpty() == false;
+}
+
+void ACXPlayerController::SendChatMessage(const FString& Message)
+{
+	FString SafeMessage;
+	if (SanitizeChatMessage(Message, SafeMessage))
+	{
+		Server_SendChatMessage(SafeMessage);
+	}
+}
+
+void ACXPlayerController::Server_SendChatMessage_Implementation(const FString& Message)
+{
+	FString SafeMessage;
+	if (SanitizeChatMessage(Message, SafeMessage) == false)
+	{
+		return;
+	}
+
+	ACXGameMode* CXGameMode = GetWorld()->GetAuthGameMode<ACXGameMode>();
+	if (IsValid(CXGameMode) == false)
+	{
+		return;
+	}
+
+	const FString SenderName = IsValid(PlayerState) ? PlayerState->GetPlayerName() : TEXT("Unknown");
+	CXGameMode->BroadcastChatMessage(FString::Printf(TEXT("%s : %s"), *SenderName, *SafeMessage));
+}
+
+void ACXPlayerController::Client_ReceiveChatMessage_Implementation(const FString& Message)
+{
+	if (IsValid(ChatWidget))
+	{
+		ChatWidget->AddChatMessage(Message);
+	}
 }
