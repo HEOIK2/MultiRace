@@ -126,6 +126,16 @@ void ACXPawn::Tick(float Delta)
 	}
 }
 
+void ACXPawn::ClearDrivingInput()
+{
+	ThrottleInput = 0.0f;
+	ChaosVehicleMovement->SetThrottleInput(0.0f);
+	ChaosVehicleMovement->SetSteeringInput(0.0f);
+	ChaosVehicleMovement->SetBrakeInput(0.0f);
+	ChaosVehicleMovement->SetHandbrakeInput(false);
+	BrakeLights(false);
+}
+
 void ACXPawn::Steering(const FInputActionValue& Value)
 {
 	float SteeringValue = Value.Get<float>();

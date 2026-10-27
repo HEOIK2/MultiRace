@@ -91,6 +91,8 @@ protected:
 public:
 	ACXPawn();
 
+	void ClearDrivingInput();
+
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 	virtual void Tick(float Delta) override;

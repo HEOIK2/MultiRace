@@ -36,6 +36,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UI)
 	TSubclassOf<UCXUI> VehicleUIClass;
 
+	UPROPERTY()
 	TObjectPtr<UCXUI> VehicleUI;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = UI)
@@ -62,6 +63,8 @@ protected:
 
 public:
 	virtual void Tick(float Delta) override;
+
+	virtual bool InputKey(const FInputKeyParams& Params) override;
 
 protected:
 	virtual void OnPossess(APawn* InPawn) override;

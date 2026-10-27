@@ -1,6 +1,7 @@
 #include "CXGameState.h"
 #include "CXPlayerController.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/PlayerState.h"
 
 void ACXGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

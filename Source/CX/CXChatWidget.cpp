@@ -11,6 +11,7 @@ void UCXChatWidget::NativeConstruct()
 
 	if (IsValid(ChatInputTextBox))
 	{
+		ChatInputTextBox->SetForegroundColor(FLinearColor(0.04f, 0.05f, 0.07f, 1.0f));
 		ChatInputTextBox->OnTextCommitted.AddUniqueDynamic(this, &ThisClass::OnChatInputCommitted);
 	}
 }
@@ -23,6 +24,14 @@ void UCXChatWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void UCXChatWidget::FocusChatInput()
+{
+	if (IsValid(ChatInputTextBox))
+	{
+		ChatInputTextBox->SetKeyboardFocus();
+	}
 }
 
 void UCXChatWidget::AddChatMessage(const FString& Message)

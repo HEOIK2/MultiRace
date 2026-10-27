@@ -55,6 +55,6 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_Winners)
 	TArray<TObjectPtr<APlayerState>> Winners;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_Winners)
 	int32 WinningCoins = 0;
 };

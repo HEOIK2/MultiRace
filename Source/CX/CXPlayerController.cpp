@@ -20,9 +20,11 @@ void ACXPlayerController::BeginPlay()
 		return;
 	}
 
-	VehicleUI = CreateWidget<UCXUI>(this, VehicleUIClass);
-	check(VehicleUI);
-	VehicleUI->AddToViewport();
+	if (IsValid(VehicleUIClass))
+	{
+		VehicleUI = CreateWidget<UCXUI>(this, VehicleUIClass);
+		if (VehicleUI) VehicleUI->AddToViewport();
+	}
 
 	if (IsValid(HUDWidgetClass))
 	{
@@ -37,6 +39,18 @@ void ACXPlayerController::BeginPlay()
 	}
 
 	RefreshHUD();
+}
+
+bool ACXPlayerController::InputKey(const FInputKeyParams& Params)
+{
+	// Focus chat while the viewport handles Enter, before deferred action processing.
+	// Returning here prevents the same press from also becoming a chat submission.
+	if (IsLocalController() && Params.Key == EKeys::Enter && Params.Event == IE_Pressed)
+	{
+		BeginChatInput(FInputActionValue());
+		return true;
+	}
+	return Super::InputKey(Params);
 }
 
 void ACXPlayerController::SetupInputComponent()
@@ -133,10 +147,13 @@ void ACXPlayerController::BeginChatInput(const FInputActionValue& Value)
 	}
 
 	bIsChatting = true;
+	// UI-only focus consumes key-release events; clear driving input first.
+	if (IsValid(VehiclePawn)) VehiclePawn->ClearDrivingInput();
 
 	FInputModeUIOnly InputMode;
 	InputMode.SetWidgetToFocus(ChatWidget->GetChatInputSlateWidget());
 	SetInputMode(InputMode);
+	ChatWidget->FocusChatInput();
 }
 
 void ACXPlayerController::EndChatInput()

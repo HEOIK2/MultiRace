@@ -37,23 +37,37 @@
 | `ACXItemBase` → `ACXCoinItem`, `ACXSpeedBuffItem` | 오버랩 아이템 공통 로직 + 각자의 효과 |
 | `ACXItemSpawner` | 아이템 스폰 및 리스폰 |
 
-## 에디터 설정
+## 실행 및 에셋 연결
 
-C++ 빌드 후 아래 애셋 작업이 필요합니다.
+필수 입력/위젯 에셋과 BP 연결, 기본 맵의 아이템 배치가 저장되어 있습니다.
 
-1. **Input Action** (`Content/VehicleTemplate/Input/Actions`, Value Type: Digital(bool))
-   - `IA_Fire`, `IA_Chat` 생성
-   - `IMC_Default`에 매핑: `IA_Fire` = Left Mouse Button, `IA_Chat` = Enter
-2. **차량 BP** (`SportsCar`, `OffroadCar` 폴더의 차량 BP 모두)
-   - Class Defaults → Input: `Fire Action` = `IA_Fire`
-   - 필요하면 `Fire Start Point` 컴포넌트 위치를 앞 범퍼 중앙에 맞춤
-3. **위젯 BP**
-   - `WBP_HUD` (부모 `CXHUDWidget`): TextBlock `CoinsText`, `BonusMaxSpeedText`, `MatchStateText`, `RemainingTimeText`, `ResultText`
-   - `WBP_Chat` (부모 `CXChatWidget`): ScrollBox `ChatLogScrollBox`, EditableTextBox `ChatInputTextBox`
-   - 이름이 다르면 BindWidget 때문에 위젯 BP 컴파일이 실패합니다.
-4. **`BP_VehicleAdvPlayerController`**: `HUD Widget Class` = `WBP_HUD`, `Chat Widget Class` = `WBP_Chat`, `Chat Action` = `IA_Chat`
-5. **`BP_VehicleAdvGameMode`**: Game State Class = `CXGameState`, Player State Class = `CXPlayerState`인지 확인
-6. **레벨**: `CXItemSpawner`를 여러 개 배치하고 각 인스턴스의 `Item Class`를 `CXCoinItem` 또는 `CXSpeedBuffItem`으로 지정 (지면에서 약 100 정도 띄우기)
-7. **테스트**: Number of Players 2, Net Mode `Play As Listen Server` (또는 Client), Editor Preferences → `Use Less CPU when in Background` 해제
+- 시작 맵: `VehicleAdvExampleMap` (기본 맵)
+- 입력: `IA_Fire` = 좌클릭, `IA_Chat` = Enter (`IMC_Default`)
+- HUD: `/Game/MultiRace/UI/WBP_HUD` — 코인, 추가 최대 속도, 상태, 남은 시간, 승패
+- 채팅: `/Game/MultiRace/UI/WBP_Chat` — Enter로 입력 시작, Enter로 전송
+- 차량 두 종류에 공격 액션 연결, 컨트롤러에 HUD/채팅 클래스 연결
+- GameMode BP 두 종류에 `CXGameState`, `CXPlayerState` 연결
+- 기본 맵: PlayerStart 3개, 코인 스포너 15개, 속도 버프 스포너 3개
+- 아이템/피격 효과: Starter Content의 파티클과 사운드를 기본값으로 사용
 
-아이템·피격 이펙트는 Starter Content(`P_Explosion`, `Collapse_Cue`, `Explosion_Cue`)를 기본값으로 사용하며, BP 서브클래스에서 교체할 수 있습니다.
+에디터에서 플레이어 수 2, `Play As Listen Server`로 실행합니다.
+필수 기능 범위이므로 게임 상태별 조작 잠금, 바퀴 피격, 지뢰는 포함하지 않습니다.
+
+### 에셋 설정 재현
+
+`CXSetupCommandlet`는 에디터 전용 설정 도구입니다. 에디터 하단 Cmd 입력란에서
+`CX.SetupRequiredAssets`를 실행하면 입력 매핑, 위젯 컴파일, BP 기본값과 기본 맵 설정을 저장합니다.
+이미 있는 위젯의 디자인과 기존 스포너 배치는 유지합니다. 플레이를 중지한 상태에서 실행하세요.
+에셋이 저장되어 있으므로 일반 플레이 때 이 명령을 실행할 필요는 없습니다.
+
+### 필수 기능 통합 검사
+
+새로운 2인 리슨 서버 PIE를 시작한 뒤 에디터 하단 Cmd 입력란에서 실행합니다.
+
+- `CX.VerifyRequired`: 코인/버프 오버랩, 소유자 전용 복제, 채팅 RPC, 2초 리스폰,
+  클라이언트 공격 RPC/라인트레이스, 5원 미만 방어, 타이머 전환, 단독 승리/패배 UI
+- PIE를 종료하고 새로 시작한 뒤 `CX.VerifyRequired Tie`: 동일 검사 + 공동 우승 UI
+
+검사 도구는 PIE 월드에서 차량 위치와 코인, 남은 시간을 변경합니다. 편집 중인 맵은 변경하지 않습니다.
+결과는 Output Log 및 `Saved/Logs/CX.log`의 `CXVerify PASS/FAIL/COMPLETE`에서 확인합니다.
+에디터 전용 코드이므로 게임 빌드에서는 실행되지 않습니다.

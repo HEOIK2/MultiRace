@@ -16,6 +16,8 @@ class CX_API UCXChatWidget : public UUserWidget
 public:
 	void AddChatMessage(const FString& Message);
 
+	void FocusChatInput();
+
 	TSharedPtr<SWidget> GetChatInputSlateWidget() const;
 
 protected:

@@ -5,6 +5,7 @@
 #include "CXGameMode.generated.h"
 
 class ACXGameState;
+class APlayerStart;
 
 UCLASS(MinimalAPI)
 class ACXGameMode : public AGameModeBase
