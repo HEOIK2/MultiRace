@@ -1,6 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
-
 #include "CXOffroadWheelRear.h"
 
 UCXOffroadWheelRear::UCXOffroadWheelRear()
@@ -8,7 +5,7 @@ UCXOffroadWheelRear::UCXOffroadWheelRear()
 	WheelRadius = 50.f;
 	CorneringStiffness = 750.0f;
 	FrictionForceMultiplier = 4.0f;
-	
+
 	SuspensionMaxRaise = 20.0f;
 	SuspensionMaxDrop = 20.0f;
 	WheelLoadRatio = 1.0f;

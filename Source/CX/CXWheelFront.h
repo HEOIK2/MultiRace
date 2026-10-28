@@ -1,14 +1,9 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "ChaosVehicleWheel.h"
 #include "CXWheelFront.generated.h"
 
-/**
- *  Base front wheel definition.
- */
 UCLASS()
 class UCXWheelFront : public UChaosVehicleWheel
 {
